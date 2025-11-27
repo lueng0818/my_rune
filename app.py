@@ -354,7 +354,7 @@ def get_rune_meaning(rune_key, theme, is_reversed):
     return f"{status_prefix} {base_text}"
 
 def generate_overall_interpretation(results, spread_config, theme):
-    """生成綜合解讀報告 (符合講義高階邏輯)"""
+    """生成綜合解讀報告 (符合講義高階邏輯 + 口語化)"""
     synthesis = ""
     last_rune = results[-1]
     is_last_wyrd = last_rune['key'] == "Wyrd"
@@ -371,9 +371,9 @@ def generate_overall_interpretation(results, spread_config, theme):
             synthesis += "\n\n⚠️ **特別提示**：未來的結果是「空牌」，代表變數極大，命運尚未定案，一切取決於您當下的選擇。"
 
     elif spread_name == "行動建議":
-        synthesis = f"您目前面臨的核心問題是 **{runes_db[results[0]['key']]['name']}**。\n"
-        synthesis += f"盧恩符文建議您採取 **{runes_db[results[1]['key']]['name']}** 的行動或態度來應對。\n"
-        synthesis += f"如此一來，預期的結果將會是 **{runes_db[results[2]['key']]['name']}**。"
+        synthesis = f"關於您當下的**核心困境**，**{runes_db[results[0]['key']]['name']}** 顯示了問題的本質。\n"
+        synthesis += f"對此，盧恩符文給予的**智慧建議**是採取具有 **{runes_db[results[1]['key']]['name']}** 特質的行動或態度。\n"
+        synthesis += f"若您願意採納此建議，事情將自然發展向 **{runes_db[results[2]['key']]['name']}** 的結果。"
 
     elif spread_name == "五張牌 (全方位)":
         # 講義高階邏輯：建議(4) 與 未來(3) 的關係
@@ -474,7 +474,7 @@ if app_mode == "🔮 抽牌諮詢室":
             "單張指引 (1 Rune)": {"count": 1, "name": "單張指引", "labels": ["指引盧恩"]},
             "三張牌：時間流 (Time Flow)": {"count": 3, "name": "時間流", "labels": ["1. 過去", "2. 現在", "3. 未來"]},
             "三張牌：行動建議 (Action)": {"count": 3, "name": "行動建議", "labels": ["1. 問題核心", "2. 採取作法", "3. 預期結果"]},
-            "五張牌：全方位解析 (Holistic)": {"count": 5, "name": "五張牌 (全方位)", "labels": ["1. 過去", "2. 現在", "3. 未來", "4. 幫助/建議", "5. 問題/挑戰"]},
+            "五張牌：全方位解析 (Holistic)": {"count": 5, "name": "五張牌 (全方位)", "labels": ["1. 過去", "2. 現在", "5. 問題/挑戰", "4. 幫助/建議", "3. 未來"]},
             "七張牌：深度分析 (Deep Analysis)": {"count": 7, "name": "七張牌 (深度分析)", "labels": ["1. 問題核心", "2. 問題核心", "3. 過去因素", "4. 過去因素", "5. 忠告", "6. 忠告", "7. 結局"]}
         }
         
@@ -512,16 +512,11 @@ if app_mode == "🔮 抽牌諮詢室":
                         
             elif num_draw == 5:
                 # 按照講義順序顯示：過去(1) -> 現在(2) -> 挑戰(5) -> 建議(4) -> 未來(3)
-                # Results indices: 0, 1, 2, 3, 4 corresponds to Labels indices: 0, 1, 2, 3, 4
-                # We want to DISPLAY in order: Label 0, Label 1, Label 4, Label 3, Label 2
-                
                 display_order_indices = [0, 1, 4, 3, 2] # 對應 results 的 index
-                
                 c1, c2, c3, c4, c5 = st.columns(5)
                 cols_list = [c1, c2, c3, c4, c5]
-                
                 for i, col in enumerate(cols_list):
-                    idx = display_order_indices[i] # 取得要顯示的第幾張牌
+                    idx = display_order_indices[i] 
                     with col:
                         display_card_html(results[idx], labels[idx], selected_theme)
 
