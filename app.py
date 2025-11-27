@@ -320,7 +320,6 @@ def draw_runes(count):
     drawn_keys = random.sample(rune_keys, count)
     results = []
     for key in drawn_keys:
-        # 部分對稱牌無逆位，但為了系統統一性，仍隨機產生狀態，顯示時再處理
         is_reversed = random.choice([True, False])
         results.append({"key": key, "reversed": is_reversed})
     return results
@@ -328,12 +327,11 @@ def draw_runes(count):
 def get_rune_meaning(rune_key, theme, is_reversed):
     """根據主題和正逆位獲取解釋"""
     rune_info = runes_db[rune_key]
-    
-    # 判斷對稱牌 (無逆位)
     symmetrical_runes = ["Gebo", "Isa", "Ingwaz", "Dagaz", "Sowilo", "Hagalaz", "Jera", "Eihwaz", "Wyrd"]
     is_symmetrical = rune_key in symmetrical_runes
     
-    # 1. 先抓主題特有的解釋
+    # 1. 主題解釋
+    base_text = ""
     if theme == "事業 (Career)" and "career" in rune_info:
         base_text = rune_info["career"]
     elif theme == "愛情 (Love)" and "love" in rune_info:
@@ -341,74 +339,77 @@ def get_rune_meaning(rune_key, theme, is_reversed):
     elif theme == "健康 (Health)" and "health" in rune_info:
         base_text = rune_info["health"]
     else:
-        # 一般/綜合主題，或該主題無特定解釋，回歸正逆位核心意義
+        # 預設解釋
         base_text = rune_info["meaning_up"] if not is_reversed or is_symmetrical else rune_info["meaning_rev"]
 
-    # 2. 如果是特定主題，還是要加上正逆位的狀態描述 (若是對稱牌則不需要)
+    # 2. 狀態前綴
     status_prefix = ""
     if not is_symmetrical and theme != "一般指引 (General)":
         if is_reversed:
-            status_prefix = "【逆位阻礙】"
+            status_prefix = "【逆位 (阻礙/轉化)】"
         else:
-            status_prefix = "【正位順利】"
+            status_prefix = "【正位 (順利/行動)】"
             
     return f"{status_prefix} {base_text}"
 
-def generate_overall_interpretation(results, spread_type, theme):
+def generate_overall_interpretation(results, spread_config, theme):
     """生成綜合解讀報告"""
     synthesis = ""
-    
-    # 判斷結果牌是否為空牌
     last_rune = results[-1]
     is_last_wyrd = last_rune['key'] == "Wyrd"
+    spread_name = spread_config['name']
     
-    if spread_type == "單張指引 (1 Rune)":
+    if spread_name == "單張指引":
         synthesis = f"這是針對您目前關於**{theme}**問題最直接的指引。請以此符文的核心能量作為當下的冥想主題。"
     
-    elif spread_type == "三張牌：時間流 (Time Flow)":
+    elif spread_name == "時間流":
         synthesis = f"從過去的 **{runes_db[results[0]['key']]['name']}** 影響至今，"
         synthesis += f"您目前正處於 **{runes_db[results[1]['key']]['name']}** 的能量狀態。"
         synthesis += f"若依照此趨勢，未來將走向 **{runes_db[results[2]['key']]['name']}**。"
         if is_last_wyrd:
             synthesis += "\n\n⚠️ **特別提示**：結果位置出現了空牌，代表未來變數極大，目前尚未定論，請聽從直覺行事。"
 
-    elif spread_type == "三張牌：行動建議 (Action)":
+    elif spread_name == "行動建議":
         synthesis = f"您的核心問題在於 **{runes_db[results[0]['key']]['name']}**。"
         synthesis += f"盧恩建議您採取 **{runes_db[results[1]['key']]['name']}** 的行動或態度。"
         synthesis += f"如此一來，預期結果將會是 **{runes_db[results[2]['key']]['name']}**。"
 
-    elif spread_type == "五張牌：全方位解析 (Holistic)":
+    elif spread_name == "五張牌 (全方位)":
         synthesis = f"針對**{theme}**的深度解析：\n"
         synthesis += f"過去的成因是 **{runes_db[results[0]['key']]['name']}**，導致了現在 **{runes_db[results[1]['key']]['name']}** 的局面。\n"
         synthesis += f"面對 **{runes_db[results[4]['key']]['name']}** 這個挑戰，"
         synthesis += f"奧丁的忠告是運用 **{runes_db[results[3]['key']]['name']}** 的智慧來應對。\n"
         synthesis += f"最終將導向 **{runes_db[results[2]['key']]['name']}** 的未來。"
-    
+
+    elif spread_name == "七張牌 (深度分析)":
+        synthesis = f"這是一個針對**{theme}**的高階深度分析：\n"
+        synthesis += f"1. 您目前面臨的困境核心為 **{runes_db[results[0]['key']]['name']}** 與 **{runes_db[results[1]['key']]['name']}**。\n"
+        synthesis += f"2. 造成此局面的過去因素是 **{runes_db[results[2]['key']]['name']}** 與 **{runes_db[results[3]['key']]['name']}**。\n"
+        synthesis += f"3. 盧恩的忠告是 **{runes_db[results[4]['key']]['name']}** 與 **{runes_db[results[5]['key']]['name']}**，這將是解決問題的關鍵。\n"
+        synthesis += f"4. 最終預測結果為 **{runes_db[results[6]['key']]['name']}**。"
+        if is_last_wyrd:
+            synthesis += "\n\n⚠️ **命運提示**：結果出現「空牌」，表示此刻無定論，需聽從命運指引，或補抽配牌。"
+
     return synthesis
 
 def display_card_html(rune_data, position, theme):
-    """顯示卡片的 HTML 組件"""
+    """顯示卡片 UI"""
     rune_key = rune_data['key']
     is_reversed = rune_data['reversed']
     rune_info = runes_db[rune_key]
     
-    # 處理圖片
     symmetrical_runes = ["Gebo", "Isa", "Ingwaz", "Dagaz", "Sowilo", "Hagalaz", "Jera", "Eihwaz", "Wyrd"]
     is_symmetrical = rune_key in symmetrical_runes
     
     img = get_rune_image(rune_info['file_name'], False if is_symmetrical else is_reversed)
-    
-    # 獲取解釋文字
     meaning_text = get_rune_meaning(rune_key, theme, is_reversed)
     
-    # 狀態文字
     status_text = "正位"
     if is_symmetrical:
         status_text = "正位 (無逆位)"
     elif is_reversed:
         status_text = "逆位"
 
-    # Streamlit 顯示
     with st.container():
         st.markdown(f"#### {position}")
         if img:
@@ -416,111 +417,156 @@ def display_card_html(rune_data, position, theme):
         else:
             st.markdown(f"## {rune_info['name']}")
             st.caption(status_text)
-        
         st.info(meaning_text)
 
-# --- 側邊欄：諮詢設定 ---
-st.sidebar.title("🌿 諮詢設定")
+# --- 側邊欄導航 ---
+st.sidebar.title("🌲 系統導航")
+app_mode = st.sidebar.radio("請選擇功能：", ["🔮 抽牌諮詢室", "📚 符文圖書館"])
 
-# 1. 選擇主題
-selected_theme = st.sidebar.selectbox(
-    "1. 請問您想諮詢的主題是？",
-    ["一般指引 (General)", "事業 (Career)", "愛情 (Love)", "健康 (Health)"]
-)
+# --- 2. 應用程式邏輯 ---
 
-# 2. 選擇牌陣 (張數)
-selected_spread = st.sidebar.selectbox(
-    "2. 請選擇使用的牌陣：",
-    [
-        "單張指引 (1 Rune)",
-        "三張牌：時間流 (Time Flow)",
-        "三張牌：行動建議 (Action)",
-        "五張牌：全方位解析 (Holistic)"
-    ]
-)
-
-st.sidebar.markdown("---")
-st.sidebar.info("💡 **操作提示**：\n先在心中默念問題，並誦讀右側的奧丁禱詞，準備好後點擊「誠心抽牌」。")
-
-# --- 主畫面 ---
-
-st.title("🌲 北歐盧恩符文數位諮詢")
-st.markdown(f"### 當前主題：{selected_theme}")
-
-# 顯示禱詞 (儀式感)
-with st.expander("📜 點擊查看奧丁禱詞 (請在抽牌前默念)", expanded=True):
-    st.markdown("> **「全能且有智慧的奧丁神，盧恩的主人，**")
-    st.markdown("> **請指引我的手及意念，讓我得到真理。」**")
-
-# 抽牌按鈕
-if st.button("🔮 誠心抽牌", type="primary"):
+if app_mode == "🔮 抽牌諮詢室":
+    st.title("🔮 北歐盧恩符文數位諮詢")
     
-    # 決定抽牌張數
-    num_draw = 1
-    labels = []
+    # --- 諮詢設定區 ---
+    col1, col2 = st.columns(2)
     
-    if "單張" in selected_spread:
-        num_draw = 1
-        labels = ["指引盧恩"]
-    elif "時間流" in selected_spread:
-        num_draw = 3
-        labels = ["1. 過去 (Past)", "2. 現在 (Present)", "3. 未來 (Future)"]
-    elif "行動建議" in selected_spread:
-        num_draw = 3
-        labels = ["1. 問題核心 (Issue)", "2. 採取作法 (Action)", "3. 預期結果 (Result)"]
-    elif "五張牌" in selected_spread:
-        num_draw = 5
-        labels = ["1. 過去 (Past)", "2. 現在 (Present)", "3. 未來 (Future)", "4. 幫助/建議 (Advice)", "5. 問題/挑戰 (Challenge)"]
+    with col1:
+        selected_theme = st.selectbox(
+            "1. 請問您想諮詢的主題是？",
+            ["一般指引 (General)", "事業 (Career)", "愛情 (Love)", "健康 (Health)"]
+        )
+    
+    with col2:
+        spread_options = {
+            "單張指引 (1 Rune)": {"count": 1, "name": "單張指引", "labels": ["指引盧恩"]},
+            "三張牌：時間流 (Time Flow)": {"count": 3, "name": "時間流", "labels": ["1. 過去", "2. 現在", "3. 未來"]},
+            "三張牌：行動建議 (Action)": {"count": 3, "name": "行動建議", "labels": ["1. 問題核心", "2. 採取作法", "3. 預期結果"]},
+            "五張牌：全方位解析 (Holistic)": {"count": 5, "name": "五張牌 (全方位)", "labels": ["1. 過去", "2. 現在", "5. 問題/挑戰", "4. 幫助/建議", "3. 未來"]},
+            "七張牌：深度分析 (Deep Analysis)": {"count": 7, "name": "七張牌 (深度分析)", "labels": ["1. 問題核心", "2. 問題核心", "3. 過去因素", "4. 過去因素", "5. 忠告", "6. 忠告", "7. 結局"]}
+        }
+        
+        selected_spread_name = st.selectbox("2. 請選擇使用的牌陣：", list(spread_options.keys()))
+        current_spread = spread_options[selected_spread_name]
 
-    # 動畫效果
-    with st.spinner("連結奧丁的智慧中..."):
-        time.sleep(1.5)
-        results = draw_runes(num_draw)
+    # --- 禱詞區 ---
+    with st.expander("📜 點擊查看奧丁禱詞 (請在抽牌前默念)", expanded=True):
+        st.markdown("> **「全能且有智慧的奧丁神，盧恩的主人，**")
+        st.markdown("> **請指引我的手及意念，讓我得到真理。」**")
+
+    # --- 抽牌按鈕 ---
+    if st.button("🔮 誠心抽牌", type="primary"):
         
-        st.divider()
+        num_draw = current_spread["count"]
+        labels = current_spread["labels"]
         
-        # --- 顯示牌卡 ---
-        if num_draw == 1:
-            c1, c2, c3 = st.columns([1, 2, 1])
-            with c2:
-                display_card_html(results[0], labels[0], selected_theme)
-                
-        elif num_draw == 3:
-            cols = st.columns(3)
-            for i in range(3):
-                with cols[i]:
-                    display_card_html(results[i], labels[i], selected_theme)
+        with st.spinner("連結奧丁的智慧中..."):
+            time.sleep(1.0)
+            results = draw_runes(num_draw)
+            
+            st.divider()
+            
+            # --- 顯示邏輯 (根據張數動態調整) ---
+            if num_draw == 1:
+                c1, c2, c3 = st.columns([1, 2, 1])
+                with c2:
+                    display_card_html(results[0], labels[0], selected_theme)
                     
-        elif num_draw == 5:
-            # 上排 3 張
-            cols_top = st.columns(3)
-            for i in range(3):
-                with cols_top[i]:
-                    display_card_html(results[i], labels[i], selected_theme)
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            # 下排 2 張 (建議與挑戰)
-            cols_bottom = st.columns(2)
-            with cols_bottom[0]:
-                display_card_html(results[3], labels[3], selected_theme)
-            with cols_bottom[1]:
-                display_card_html(results[4], labels[4], selected_theme)
+            elif num_draw == 3:
+                cols = st.columns(3)
+                for i in range(3):
+                    with cols[i]:
+                        display_card_html(results[i], labels[i], selected_theme)
+                        
+            elif num_draw == 5:
+                # 五張牌佈局調整：過去、現在 (上排左中) | 挑戰、建議 (上排右/下排) | 未來 (最右或底部)
+                # 為了清晰，採用線性排列展示五個維度
+                c1, c2, c3, c4, c5 = st.columns(5)
+                # 順序：過去(0), 現在(1), 挑戰(4), 建議(3), 未來(2) -> 對應 results index
+                # 但 labels 已經調整為：1.過去, 2.現在, 5.挑戰, 4.建議, 3.未來
+                # 這裡要小心 index 對應。
+                # results 是隨機抽出的 5 張牌 (index 0~4)。
+                # 我們按照 labels 的順序顯示：
+                # Label 0 (過去) -> Result 0
+                # Label 1 (現在) -> Result 1
+                # Label 2 (挑戰) -> Result 4
+                # Label 3 (建議) -> Result 3
+                # Label 4 (未來) -> Result 2
+                
+                # 為了簡化，我們直接依照 labels 順序顯示，
+                # 但要注意 results 的 index 是否需要重新映射？
+                # 講義定義：1(過去), 2(現在), 3(未來), 4(建議), 5(挑戰)
+                # 我們的 labels 是：["1. 過去", "2. 現在", "5. 挑戰", "4. 建議", "3. 未來"]
+                # 我們可以依序取出 results[0], results[1], results[4], results[3], results[2]
+                
+                ordered_indices = [0, 1, 4, 3, 2] # 根據講義編號邏輯重組顯示順序
+                
+                for i, col in enumerate([c1, c2, c3, c4, c5]):
+                    idx = ordered_indices[i]
+                    with col:
+                        display_card_html(results[idx], labels[i], selected_theme)
 
-        # --- 整體解讀報告 ---
-        st.divider()
-        st.subheader("📝 整體解讀報告")
+            elif num_draw == 7:
+                # 七張牌佈局：問題(1,2) | 過去(3,4) | 忠告(5,6) | 結局(7)
+                st.markdown("### ❓ 問題核心")
+                c1, c2 = st.columns(2)
+                with c1: display_card_html(results[0], labels[0], selected_theme)
+                with c2: display_card_html(results[1], labels[1], selected_theme)
+                
+                st.markdown("---")
+                st.markdown("### 🕰️ 過去因素")
+                c3, c4 = st.columns(2)
+                with c3: display_card_html(results[2], labels[2], selected_theme)
+                with c4: display_card_html(results[3], labels[3], selected_theme)
+                
+                st.markdown("---")
+                st.markdown("### 💡 盧恩忠告")
+                c5, c6 = st.columns(2)
+                with c5: display_card_html(results[4], labels[4], selected_theme)
+                with c6: display_card_html(results[5], labels[5], selected_theme)
+                
+                st.markdown("---")
+                st.markdown("### 🏁 最終結局")
+                c7_1, c7_2, c7_3 = st.columns([1, 2, 1])
+                with c7_2: display_card_html(results[6], labels[6], selected_theme)
+
+            # --- 綜合報告 ---
+            st.divider()
+            st.subheader("📝 整體解讀報告")
+            final_report = generate_overall_interpretation(results, current_spread, selected_theme)
+            st.success(final_report)
+            
+            if selected_theme == "健康 (Health)":
+                st.caption("⚠️ 免責聲明：盧恩諮詢僅供參考，身體不適請務必尋求專業醫療協助。")
+
+elif app_mode == "📚 符文圖書館":
+    st.title("📚 盧恩符文圖書館")
+    st.write("查詢講義中記載的詳細釋義。")
+    
+    search_rune = st.selectbox("選擇符文查看詳情：", rune_keys)
+    
+    if search_rune:
+        info = runes_db[search_rune]
+        img = get_rune_image(info['file_name'], False)
         
-        overall_text = generate_overall_interpretation(results, selected_spread, selected_theme)
+        col_img, col_txt = st.columns([1, 3])
+        with col_img:
+            if img:
+                st.image(img, caption=info['name'])
+            else:
+                st.write("(圖片未找到)")
         
-        st.success(overall_text)
-        
-        # 根據講義的額外提示
-        if selected_theme == "健康 (Health)":
-            st.warning("⚠️ 免責聲明：盧恩諮詢僅供參考，身體不適請務必尋求專業醫療協助。")
-        
-        if num_draw == 5:
-            st.info("💡 **進階解讀技巧**：請觀察第4張「建議牌」如何能夠解決第5張「挑戰牌」的困難，這通常是改變未來的關鍵鑰匙。")
+        with col_txt:
+            st.subheader(f"{info['name']}")
+            st.write(f"**日期**：{info['dates']}")
+            st.write(f"**元素**：{info['element']}")
+            st.markdown("---")
+            st.markdown(f"**🟢 正位意義**：{info['meaning_up']}")
+            st.markdown(f"**🔴 逆位意義**：{info['meaning_rev']}")
+            st.markdown("---")
+            st.markdown(f"**💼 事業運**：{info['career']}")
+            st.markdown(f"**❤️ 愛情運**：{info['love']}")
+            st.markdown(f"**🏥 健康運**：{info['health']}")
 
 st.markdown("---")
 st.markdown("<center>資料來源：北歐盧恩符文諮詢師整合班講義 & 初階證書課程講義</center>", unsafe_allow_html=True)
