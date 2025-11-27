@@ -450,7 +450,7 @@ st.markdown(f"### 當前主題：{selected_theme}")
 # 顯示禱詞 (儀式感)
 with st.expander("📜 點擊查看奧丁禱詞 (請在抽牌前默念)", expanded=True):
     st.markdown("> **「全能且有智慧的奧丁神，盧恩的主人，**")
-    [cite_start]st.markdown("> **請指引我的手及意念，讓我得到真理。」** [cite: 553-555]")
+    st.markdown("> **請指引我的手及意念，讓我得到真理。」**")
 
 # 抽牌按鈕
 if st.button("🔮 誠心抽牌", type="primary"):
